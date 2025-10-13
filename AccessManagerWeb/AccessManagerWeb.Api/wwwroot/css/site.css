@@ -1,0 +1,59 @@
+/* General styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    flex: 1;
+}
+
+/* Form styles */
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Card styles */
+.request-card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.request-card .card-header {
+    background-color: #f8f9fa;
+}
+
+.request-card .badge {
+    font-size: 0.9em;
+}
+
+/* Status badges */
+.badge-pending {
+    background-color: #ffc107;
+}
+
+.badge-approved {
+    background-color: #28a745;
+}
+
+.badge-denied {
+    background-color: #dc3545;
+}
+
+/* Loading spinner */
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    margin: 2rem auto;
+    display: none;
+}
+
+/* Error message */
+.error-message {
+    color: #dc3545;
+    margin-top: 1rem;
+    display: none;
+}
