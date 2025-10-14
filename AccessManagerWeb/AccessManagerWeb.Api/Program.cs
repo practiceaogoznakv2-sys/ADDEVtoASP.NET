@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Server.IISIntegration;
+using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.Authorization;
 using AccessManagerWeb.Infrastructure.Data;
 using AccessManagerWeb.Infrastructure.Repositories;
 using AccessManagerWeb.Infrastructure.Services;
@@ -32,7 +34,12 @@ builder.Services.AddCors(options =>
 });
 
 // Настройка Windows Authentication
-builder.Services.AddAuthentication(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme;
+}).AddNegotiate();
+
 builder.Services.Configure<IISOptions>(options => 
 {
     options.AutomaticAuthentication = true;
@@ -94,6 +101,14 @@ app.Use(async (context, next) =>
     }
 });
 
+// Настройка глобальной авторизации
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -114,6 +129,25 @@ app.UseHttpsRedirection();
 // Аутентификация и авторизация после HTTPS
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Добавляем обработку ошибок аутентификации
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == 401)
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+            title = "Authentication required",
+            status = 401,
+            detail = "You must be authenticated to access this resource",
+            instance = context.Request.Path
+        });
+    }
+});
 
 // Swagger после базовой настройки безопасности
 app.UseSwagger();
