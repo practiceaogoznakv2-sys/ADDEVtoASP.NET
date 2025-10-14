@@ -9,8 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка HTTPS
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.ListenLocalhost(5000); // HTTP
-    serverOptions.ListenLocalhost(5001, listenOptions =>
+    // Прослушиваем все IP адреса
+    serverOptions.Listen(System.Net.IPAddress.Any, 5080); // HTTP
+    serverOptions.Listen(System.Net.IPAddress.Any, 5081, listenOptions =>
     {
         listenOptions.UseHttps();
     }); // HTTPS
@@ -41,6 +42,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Добавляем обработку ошибок
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error: {ex.Message}");
+        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+        throw;
+    }
+});
 
 if (app.Environment.IsDevelopment())
 {
