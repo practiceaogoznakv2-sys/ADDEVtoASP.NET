@@ -9,9 +9,19 @@ using AccessManagerWeb.Core.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 // Настройка URLS через конфигурацию
-builder.WebHost.UseUrls("http://0.0.0.0:5080", "https://0.0.0.0:5081");
+builder.WebHost.UseUrls("http://localhost:5080", "https://localhost:5081");
 
 builder.Services.AddControllers();
+
+// Настройка Swagger
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Access Manager API",
+        Version = "v1"
+    });
+});
 
 // Add services to the container
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -58,11 +68,22 @@ app.Use(async (context, next) =>
     }
 });
 
-if (app.Environment.IsDevelopment())
+// Настройка Swagger для всех окружений
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
+    c.RoutePrefix = string.Empty; // Swagger UI будет доступен на корневом URL
+});
+
+// Настройка HTTPS
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
 }
+
+app.UseHttpsRedirection();
+app.UseRouting();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
