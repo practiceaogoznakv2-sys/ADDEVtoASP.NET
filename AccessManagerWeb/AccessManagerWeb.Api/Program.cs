@@ -14,6 +14,14 @@ builder.WebHost.UseUrls("http://localhost:5080", "https://localhost:5081");
 // Настройка CORS
 builder.Services.AddCors(options =>
 {
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5080", "https://localhost:5081")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
@@ -79,30 +87,37 @@ app.Use(async (context, next) =>
     }
 });
 
-// Настройка Swagger для всех окружений
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
-    c.RoutePrefix = string.Empty; // Swagger UI будет доступен на корневом URL
-});
+    app.UseDeveloperExceptionPage();
+}
 
-// Включаем CORS
+// Настройка CORS должна быть в начале конвейера
 app.UseCors("AllowAll");
 
-// Настройка HTTPS
+app.UseRouting();
+
+// Настройка HTTPS после CORS и Routing
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
-
 app.UseHttpsRedirection();
-app.UseRouting();
+
+// Аутентификация и авторизация после HTTPS
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Добавляем обработку опций для CORS
-app.MapControllers().RequireCors("AllowAll");
+// Swagger после базовой настройки безопасности
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
+    c.RoutePrefix = string.Empty;
+});
+
+// Endpoints должны быть в конце
+app.MapControllers();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
