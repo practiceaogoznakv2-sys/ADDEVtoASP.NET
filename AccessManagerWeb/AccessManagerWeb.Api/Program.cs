@@ -6,6 +6,16 @@ using AccessManagerWeb.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Настройка HTTPS
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenLocalhost(5000); // HTTP
+    serverOptions.ListenLocalhost(5001, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    }); // HTTPS
+});
+
 builder.Services.AddControllers();
 
 // Add services to the container
