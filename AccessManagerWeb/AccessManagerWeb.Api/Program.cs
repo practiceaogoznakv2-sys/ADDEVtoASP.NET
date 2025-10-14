@@ -41,6 +41,7 @@ builder.Services.Configure<IISOptions>(options =>
 builder.Services.AddControllers();
 
 // Настройка Swagger
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -48,11 +49,6 @@ builder.Services.AddSwaggerGen(c =>
         Title = "Access Manager API",
         Version = "v1",
         Description = "API использует Windows Authentication"
-    });
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Access Manager API",
-        Version = "v1"
     });
 });
 
@@ -74,9 +70,6 @@ builder.Services.AddSingleton<IEmailService>(sp =>
         builder.Configuration["Email:SmtpServer"],
         int.Parse(builder.Configuration["Email:SmtpPort"]),
         builder.Configuration["Email:FromAddress"]));
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // Добавляем детальное логирование
 builder.Logging.ClearProviders();
