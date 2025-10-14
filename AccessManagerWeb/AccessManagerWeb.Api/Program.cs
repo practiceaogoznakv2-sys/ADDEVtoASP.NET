@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using AccessManagerWeb.Infrastructure.Data;
 using AccessManagerWeb.Infrastructure.Repositories;
 using AccessManagerWeb.Infrastructure.Services;
@@ -6,16 +8,8 @@ using AccessManagerWeb.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Настройка HTTPS
-builder.WebHost.ConfigureKestrel(serverOptions =>
-{
-    // Прослушиваем все IP адреса
-    serverOptions.Listen(System.Net.IPAddress.Any, 5080); // HTTP
-    serverOptions.Listen(System.Net.IPAddress.Any, 5081, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    }); // HTTPS
-});
+// Настройка URLS через конфигурацию
+builder.WebHost.UseUrls("http://0.0.0.0:5080", "https://0.0.0.0:5081");
 
 builder.Services.AddControllers();
 
@@ -41,6 +35,12 @@ builder.Services.AddSingleton<IEmailService>(sp =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Добавляем детальное логирование
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Trace);
+
 var app = builder.Build();
 
 // Добавляем обработку ошибок
@@ -52,8 +52,8 @@ app.Use(async (context, next) =>
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error: {ex.Message}");
-        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Необработанная ошибка: {Message}", ex.Message);
         throw;
     }
 });
