@@ -11,6 +11,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка URLS через конфигурацию
 builder.WebHost.UseUrls("http://localhost:5080", "https://localhost:5081");
 
+// Настройка CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 
 // Настройка Swagger
@@ -76,6 +87,9 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty; // Swagger UI будет доступен на корневом URL
 });
 
+// Включаем CORS
+app.UseCors("AllowAll");
+
 // Настройка HTTPS
 if (!app.Environment.IsDevelopment())
 {
@@ -84,6 +98,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Добавляем обработку опций для CORS
+app.MapControllers().RequireCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
