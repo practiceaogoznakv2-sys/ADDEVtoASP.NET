@@ -1,8 +1,10 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.IISIntegration;
+using Microsoft.AspNetCore.Diagnostics;
 using AccessManagerWeb.Infrastructure.Data;
 using AccessManagerWeb.Infrastructure.Repositories;
 using AccessManagerWeb.Infrastructure.Services;
@@ -10,8 +12,18 @@ using AccessManagerWeb.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Настройка Kestrel
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.AddServerHeader = false;
+    serverOptions.Limits.MaxConcurrentConnections = 100;
+    serverOptions.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(30);
+});
+
 // Настройка URLS через конфигурацию
-builder.WebHost.UseUrls("http://localhost:5080", "https://localhost:5081");
+builder.WebHost.UseUrls(builder.Configuration["Urls:0"], builder.Configuration["Urls:1"]);
 
 // Добавляем поддержку контроллеров и JSON
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -34,107 +46,42 @@ builder.Services.AddSwaggerGen(c =>
 // Настройка CORS
 builder.Services.AddCors(options =>
 {
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5080", "https://localhost:5081")
+        policy.WithOrigins(origins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
-
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
 });
 
 // Настройка Windows Authentication
-builder.Services.AddAuthentication(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
 
 // Настройка AD аутентификации
 builder.Services.Configure<IISOptions>(options =>
 {
     options.AutomaticAuthentication = true;
-    options.ForwardWindowsAuthToken = true;
-});
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key)
-    };
 });
 
-// Регистрация сервиса AD аутентификации
-builder.Services.AddScoped<ADAuthenticationService>();
-
-builder.Services.Configure<IISOptions>(options => 
-{
-    options.AutomaticAuthentication = true;
-});
-
-builder.Services.AddControllers();
-
-// Настройка Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Access Manager API",
-        Version = "v1",
-        Description = "API with JWT Authentication"
-    });
-
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
-});
-
-// Add services to the container
+// Настройка DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register repositories
+// Регистрация сервисов
 builder.Services.AddScoped<IResourceRequestRepository, ResourceRequestRepository>();
-
-// Register services
-builder.Services.AddSingleton<IActiveDirectoryService>(sp => 
+builder.Services.AddScoped<IActiveDirectoryService>(sp => 
     new ActiveDirectoryService(
         builder.Configuration["ActiveDirectory:Domain"],
-        builder.Configuration["ActiveDirectory:Container"]));
-
-builder.Services.AddSingleton<IEmailService>(sp => 
+        builder.Configuration["ActiveDirectory:Container"]
+    ));
+builder.Services.AddScoped<IEmailService>(sp => 
     new EmailService(
         builder.Configuration["Email:SmtpServer"],
         int.Parse(builder.Configuration["Email:SmtpPort"]),
-        builder.Configuration["Email:FromAddress"]));
+        builder.Configuration["Email:FromAddress"]
+    ));
 
 // Настройка глобальной авторизации
 builder.Services.AddAuthorization(options =>
@@ -144,85 +91,57 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// Добавляем детальное логирование
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
-builder.Logging.SetMinimumLevel(LogLevel.Trace);
-
 var app = builder.Build();
 
-// Добавляем обработку ошибок
-app.Use(async (context, next) =>
+// Глобальный обработчик ошибок
+app.UseExceptionHandler(errorApp =>
 {
-    try
+    errorApp.Run(async context =>
     {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Необработанная ошибка: {Message}", ex.Message);
-        throw;
-    }
-});
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-
-// Настройка CORS должна быть в начале конвейера
-app.UseCors("AllowAll");
-
-// Настройка статических файлов и маршрутизации
-app.UseDefaultFiles();
-app.UseStaticFiles();
-app.UseRouting();
-
-// Настройка безопасности
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-}
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Обработка ошибок аутентификации
-app.Use(async (context, next) =>
-{
-    await next();
-
-    if (context.Response.StatusCode == 401)
-    {
+        context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new
+        var error = context.Features.Get<IExceptionHandlerFeature>();
+        if (error != null)
         {
-            type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
-            title = "Authentication required",
-            status = 401,
-            detail = "You must be authenticated to access this resource",
-            instance = context.Request.Path
-        });
-    }
+            await context.Response.WriteAsJsonAsync(new
+            {
+                StatusCode = 500,
+                Message = "An internal server error occurred."
+            });
+        }
+    });
 });
 
-// Swagger в режиме разработки
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
-        c.RoutePrefix = "swagger";
-    });
+    app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseHsts();
 }
 
-// SPA fallback route
-app.MapFallbackToFile("index.html");
+// Правильный порядок middleware
+app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors();
+app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 
-// API endpoints
 app.MapControllers();
 
-app.Run();
+// Добавляем health check endpoint
+app.MapGet("/health", () => Results.Ok("Healthy"));
+
+try
+{
+    app.Run();
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogCritical(ex, "Application terminated unexpectedly");
+}

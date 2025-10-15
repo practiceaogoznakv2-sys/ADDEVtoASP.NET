@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using AccessManagerWeb.Core.Models;
 using AccessManagerWeb.Core.Interfaces;
 using System.Security.Principal;
+using System.Security.Claims;
 using System.Linq;
 
 namespace AccessManagerWeb.Api.Controllers

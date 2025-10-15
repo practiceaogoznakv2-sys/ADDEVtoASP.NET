@@ -64,7 +64,7 @@ namespace AccessManagerWeb.Infrastructure.Services
                     if (user == null)
                         return new List<string>();
 
-                    var userGroups = user.GetGroups();
+                    var userGroups = await Task.Run(() => user.GetGroups());
                     foreach (var group in userGroups)
                     {
                         groups.Add(group.Name);
@@ -77,19 +77,6 @@ namespace AccessManagerWeb.Infrastructure.Services
                 Console.WriteLine($"Ошибка при получении групп пользователя: {ex.Message}");
                 return new List<string>();
             }
-        }
-            {
-                var user = await Task.Run(() => UserPrincipal.FindByIdentity(context, username));
-                if (user != null)
-                {
-                    var userGroups = await Task.Run(() => user.GetGroups());
-                    foreach (var group in userGroups)
-                    {
-                        groups.Add(group.Name);
-                    }
-                }
-            }
-            return groups;
         }
 
         public async Task<bool> AddUserToGroupAsync(string username, string groupName)
