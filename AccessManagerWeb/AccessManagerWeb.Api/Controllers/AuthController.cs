@@ -19,21 +19,26 @@ namespace AccessManagerWeb.Api.Controllers
             _adService = adService;
         }
 
-        [HttpGet("validate")]
-        public async Task<IActionResult> ValidateUser()
+        [HttpGet("userinfo")]
+        [Authorize]
+        public async Task<IActionResult> GetUserInfo()
         {
             if (!User.Identity.IsAuthenticated)
             {
                 return Unauthorized("Пользователь не аутентифицирован");
             }
 
-            var windowsIdentity = User.Identity as WindowsIdentity;
-            if (windowsIdentity == null)
+            var username = User.Identity.Name;
+            if (string.IsNullOrEmpty(username))
             {
-                return Unauthorized("Не удалось получить Windows Identity");
+                return Unauthorized("Не удалось получить имя пользователя");
             }
 
-            var username = windowsIdentity.Name;
+            // Убираем домен из имени пользователя, если он есть
+            if (username.Contains("\\"))
+            {
+                username = username.Split('\\')[1];
+            }
             var userProfile = await _adService.GetUserProfileAsync(username);
             
             if (userProfile == null)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.IISIntegration;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 using AccessManagerWeb.Infrastructure.Data;
 using AccessManagerWeb.Infrastructure.Repositories;
 using AccessManagerWeb.Infrastructure.Services;
@@ -56,13 +57,24 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Настройка Windows Authentication
-builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
+// Настройка Windows Authentication и AD
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = IISDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = IISDefaults.AuthenticationScheme;
+    options.DefaultScheme = IISDefaults.AuthenticationScheme;
+})
+.AddWindows(options =>
+{
+    options.AutomaticAuthentication = true;
+});
 
-// Настройка AD аутентификации
+// Настройка IIS
 builder.Services.Configure<IISOptions>(options =>
 {
     options.AutomaticAuthentication = true;
+    options.ForwardClientCertificate = false;
+    options.AuthenticationDisplayName = "Windows";
 });
 
 // Настройка DbContext
@@ -126,10 +138,11 @@ else
 // Правильный порядок middleware
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseCors();
-app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.MapControllers();
 

@@ -1,59 +1,214 @@
-/* General styles */
-body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+/* Основные стили *//* General styles */
+
+:root {body {
+
+    --primary-color: #0066cc;    min-height: 100vh;
+
+    --secondary-color: #f8f9fa;    display: flex;
+
+    --text-color: #333;    flex-direction: column;
+
+    --border-color: #dee2e6;}
+
 }
 
 .container {
-    flex: 1;
+
+.bg-custom-primary {    flex: 1;
+
+    background-color: var(--primary-color);}
+
 }
 
 /* Form styles */
-.form-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
+
+.status-badge {.form-container {
+
+    padding: 0.25em 0.6em;    max-width: 600px;
+
+    font-size: 0.75em;    margin: 0 auto;
+
+    font-weight: 600;    padding: 20px;
+
+    border-radius: 0.25rem;}
+
 }
 
 /* Card styles */
-.request-card {
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
 
-.request-card .card-header {
-    background-color: #f8f9fa;
+.status-pending {.request-card {
+
+    background-color: #ffc107;    margin-bottom: 20px;
+
+    color: #000;    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+}}
+
+
+
+.status-approved {.request-card .card-header {
+
+    background-color: #198754;    background-color: #f8f9fa;
+
+    color: #fff;}
+
 }
 
 .request-card .badge {
-    font-size: 0.9em;
-}
 
-/* Status badges */
+.status-rejected {    font-size: 0.9em;
+
+    background-color: #dc3545;}
+
+    color: #fff;
+
+}/* Status badges */
+
 .badge-pending {
-    background-color: #ffc107;
+
+.dashboard-stat {    background-color: #ffc107;
+
+    padding: 1.5rem;}
+
+    border-radius: 0.5rem;
+
+    text-align: center;.badge-approved {
+
+}    background-color: #28a745;
+
 }
 
-.badge-approved {
-    background-color: #28a745;
-}
+.dashboard-stat h3 {
 
-.badge-denied {
-    background-color: #dc3545;
-}
+    font-size: 2rem;.badge-denied {
 
-/* Loading spinner */
-.spinner {
-    width: 3rem;
-    height: 3rem;
+    margin-bottom: 0.5rem;    background-color: #dc3545;
+
+}}
+
+
+
+.dashboard-stat p {/* Loading spinner */
+
+    margin: 0;.spinner {
+
+    color: #6c757d;    width: 3rem;
+
+}    height: 3rem;
+
     margin: 2rem auto;
-    display: none;
+
+.stat-pending {    display: none;
+
+    background-color: #fff3cd;}
+
+    border: 1px solid #ffeeba;
+
+}/* Error message */
+
+.error-message {
+
+.stat-approved {    color: #dc3545;
+
+    background-color: #d4edda;    margin-top: 1rem;
+
+    border: 1px solid #c3e6cb;    display: none;
+
+}}
+
+.stat-rejected {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
 }
 
-/* Error message */
-.error-message {
-    color: #dc3545;
-    margin-top: 1rem;
-    display: none;
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn-icon {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.user-info {
+    color: #fff;
+    opacity: 0.9;
+}
+
+.user-info:hover {
+    opacity: 1;
+}
+
+/* Анимации для уведомлений */
+.toast-top-right {
+    top: 1rem;
+    right: 1rem;
+}
+
+/* Стили для модальных окон */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .dashboard-stat {
+        margin-bottom: 1rem;
+    }
+
+    .table-responsive {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Улучшенные стили для форм */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #004c99;
+}
+
+/* Улучшенные стили для навигации */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.nav-link {
+    position: relative;
+}
+
+.nav-link:after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.nav-link:hover:after {
+    width: 100%;
 }
