@@ -38,16 +38,46 @@ namespace AccessManagerWeb.Infrastructure.Services
 
         public async Task<bool> ValidateUserCredentialsAsync(string username, string password)
         {
-            using (var context = new PrincipalContext(ContextType.Domain, _domain, _container))
+            try
             {
-                return await Task.Run(() => context.ValidateCredentials(username, password));
+                using (var context = new PrincipalContext(ContextType.Domain, _domain, _container))
+                {
+                    return await Task.Run(() => context.ValidateCredentials(username, password));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Логируем ошибку
+                Console.WriteLine($"Ошибка при валидации учетных данных: {ex.Message}");
+                return false;
             }
         }
 
         public async Task<IEnumerable<string>> GetUserGroupsAsync(string username)
         {
-            var groups = new List<string>();
-            using (var context = new PrincipalContext(ContextType.Domain, _domain, _container))
+            try
+            {
+                var groups = new List<string>();
+                using (var context = new PrincipalContext(ContextType.Domain, _domain, _container))
+                {
+                    var user = await Task.Run(() => UserPrincipal.FindByIdentity(context, username));
+                    if (user == null)
+                        return new List<string>();
+
+                    var userGroups = user.GetGroups();
+                    foreach (var group in userGroups)
+                    {
+                        groups.Add(group.Name);
+                    }
+                }
+                return groups;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении групп пользователя: {ex.Message}");
+                return new List<string>();
+            }
+        }
             {
                 var user = await Task.Run(() => UserPrincipal.FindByIdentity(context, username));
                 if (user != null)

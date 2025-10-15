@@ -1,10 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
-using System.Text;
+using Microsoft.AspNetCore.Server.IISIntegration;
 using AccessManagerWeb.Infrastructure.Data;
 using AccessManagerWeb.Infrastructure.Repositories;
 using AccessManagerWeb.Infrastructure.Services;
@@ -34,20 +32,15 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Настройка JWT Authentication
-builder.Services.AddAuthentication(options =>
+// Настройка Windows Authentication
+builder.Services.AddAuthentication(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+
+// Настройка AD аутентификации
+builder.Services.Configure<IISOptions>(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    var jwtSettings = builder.Configuration.GetSection("Jwt").Get<Dictionary<string, string>>();
-    var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]);
-    
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
+    options.AutomaticAuthentication = true;
+    options.ForwardWindowsAuthToken = true;
+});
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,

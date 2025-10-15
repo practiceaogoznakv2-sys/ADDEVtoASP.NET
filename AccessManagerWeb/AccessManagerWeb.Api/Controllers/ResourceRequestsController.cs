@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using AccessManagerWeb.Core.Models;
 using AccessManagerWeb.Core.Interfaces;
-using System.Security.Claims;
+using System.Security.Principal;
+using System.Linq;
 
 namespace AccessManagerWeb.Api.Controllers
 {
@@ -15,27 +16,62 @@ namespace AccessManagerWeb.Api.Controllers
     {
         private readonly IResourceRequestRepository _repository;
         private readonly IEmailService _emailService;
+        private readonly IActiveDirectoryService _adService;
 
-        public ResourceRequestsController(IResourceRequestRepository repository, IEmailService emailService)
+        public ResourceRequestsController(
+            IResourceRequestRepository repository, 
+            IEmailService emailService,
+            IActiveDirectoryService adService)
         {
             _repository = repository;
             _emailService = emailService;
+            _adService = adService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ResourceRequest>>> GetAll()
         {
-            var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            var requests = await _repository.GetByUserAsync(username);
+            var windowsIdentity = User.Identity as WindowsIdentity;
+            if (windowsIdentity == null)
+                return Unauthorized("Не удалось получить Windows Identity");
+
+            var userGroups = await _adService.GetUserGroupsAsync(windowsIdentity.Name);
+            bool isAdmin = userGroups.Any(g => g.ToLower() == "accessmanageradmins");
+
+            if (!isAdmin)
+                return Forbid();
+
+            var requests = await _repository.GetAllAsync();
+            return Ok(requests);
+        }
+
+        [HttpGet("my")]
+        public async Task<ActionResult<IEnumerable<ResourceRequest>>> GetMyRequests()
+        {
+            var windowsIdentity = User.Identity as WindowsIdentity;
+            if (windowsIdentity == null)
+                return Unauthorized("Не удалось получить Windows Identity");
+
+            var requests = await _repository.GetByUserAsync(windowsIdentity.Name);
             return Ok(requests);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ResourceRequest>> GetById(int id)
         {
+            var windowsIdentity = User.Identity as WindowsIdentity;
+            if (windowsIdentity == null)
+                return Unauthorized("Не удалось получить Windows Identity");
+
             var request = await _repository.GetByIdAsync(id);
             if (request == null)
                 return NotFound();
+
+            var userGroups = await _adService.GetUserGroupsAsync(windowsIdentity.Name);
+            bool isAdmin = userGroups.Any(g => g.ToLower() == "accessmanageradmins");
+
+            if (!isAdmin && request.RequestorUsername != windowsIdentity.Name)
+                return Forbid();
 
             return Ok(request);
         }
@@ -43,7 +79,15 @@ namespace AccessManagerWeb.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ResourceRequest>> Create([FromBody] ResourceRequest request)
         {
-            request.RequestorUsername = User.FindFirst(ClaimTypes.Name)?.Value;
+            var windowsIdentity = User.Identity as WindowsIdentity;
+            if (windowsIdentity == null)
+                return Unauthorized("Не удалось получить Windows Identity");
+
+            var userProfile = await _adService.GetUserProfileAsync(windowsIdentity.Name);
+            if (userProfile == null)
+                return NotFound("Профиль пользователя не найден");
+
+            request.RequestorUsername = windowsIdentity.Name;
             request.Status = "Pending";
             
             var createdRequest = await _repository.CreateAsync(request);

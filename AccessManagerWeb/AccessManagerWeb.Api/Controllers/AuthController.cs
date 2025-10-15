@@ -1,12 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using System.Security.Principal;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using AccessManagerWeb.Core.Interfaces;
+using System.DirectoryServices.AccountManagement;
 
 namespace AccessManagerWeb.Api.Controllers
 {
@@ -15,37 +13,42 @@ namespace AccessManagerWeb.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IActiveDirectoryService _adService;
-        private readonly IConfiguration _configuration;
 
-        public AuthController(IActiveDirectoryService adService, IConfiguration configuration)
+        public AuthController(IActiveDirectoryService adService)
         {
             _adService = adService;
-            _configuration = configuration;
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        [HttpGet("validate")]
+        public async Task<IActionResult> ValidateUser()
         {
-            var isValid = await _adService.ValidateUserCredentialsAsync(request.Username, request.Password);
-            if (!isValid)
-                return Unauthorized();
-
-            var userProfile = await _adService.GetUserProfileAsync(request.Username);
-            if (userProfile == null)
-                return NotFound();
-
-            var userGroups = await _adService.GetUserGroupsAsync(request.Username);
-
-            var claims = new[]
+            if (!User.Identity.IsAuthenticated)
             {
-                new Claim(ClaimTypes.Name, userProfile.Username),
-                new Claim(ClaimTypes.Email, userProfile.Email),
-                new Claim("DisplayName", userProfile.DisplayName ?? string.Empty),
-                new Claim("Department", userProfile.Department ?? string.Empty)
-            };
+                return Unauthorized("Пользователь не аутентифицирован");
+            }
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var windowsIdentity = User.Identity as WindowsIdentity;
+            if (windowsIdentity == null)
+            {
+                return Unauthorized("Не удалось получить Windows Identity");
+            }
+
+            var username = windowsIdentity.Name;
+            var userProfile = await _adService.GetUserProfileAsync(username);
+            
+            if (userProfile == null)
+            {
+                return NotFound("Профиль пользователя не найден в AD");
+            }
+
+            return Ok(new
+            {
+                userProfile.Username,
+                userProfile.DisplayName,
+                userProfile.Email,
+                userProfile.Department,
+                Groups = await _adService.GetUserGroupsAsync(username)
+            });
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
