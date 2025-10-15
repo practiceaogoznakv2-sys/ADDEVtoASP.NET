@@ -1,348 +1,692 @@
-// Конфигурация// API client functions
+// Конфигурация и константы// Конфигурация// API client functions
 
-const API_BASE_URL = window.location.origin;class ApiClient {
+const CONFIG = {
 
-const AUTH_ENDPOINTS = {    async request(endpoint, options = {}) {
+    API: {const API_BASE_URL = window.location.origin;class ApiClient {
 
-    USER_INFO: '/api/auth/userinfo',        const token = getAuthToken();
+        BASE_URL: window.location.origin,
 
-    LOGOUT: '/api/auth/logout'        if (token) {
+        ENDPOINTS: {const AUTH_ENDPOINTS = {    async request(endpoint, options = {}) {
 
-};            options.headers = {
+            AUTH: {
 
-const REQUESTS_ENDPOINTS = {                ...options.headers,
+                USER_INFO: '/api/auth/userinfo',    USER_INFO: '/api/auth/userinfo',        const token = getAuthToken();
 
-    LIST: '/api/resourcerequests',                'Authorization': `Bearer ${token}`
+                LOGOUT: '/api/auth/logout'
 
-    CREATE: '/api/resourcerequests',            };
+            },    LOGOUT: '/api/auth/logout'        if (token) {
 
-    UPDATE_STATUS: (id) => `/api/resourcerequests/${id}/status`        }
+            REQUESTS: {
 
-};
+                LIST: '/api/resourcerequests',};            options.headers = {
 
-        const response = await fetch(`/api/${endpoint}`, options);
+                CREATE: '/api/resourcerequests',
 
-// Настройка toastr        if (!response.ok) {
+                UPDATE_STATUS: (id) => `/api/resourcerequests/${id}/status`const REQUESTS_ENDPOINTS = {                ...options.headers,
 
-toastr.options = {            throw new Error(`API error: ${response.statusText}`);
+            }
 
-    closeButton: true,        }
+        }    LIST: '/api/resourcerequests',                'Authorization': `Bearer ${token}`
+
+    },
+
+    UI: {    CREATE: '/api/resourcerequests',            };
+
+        ANIMATION_DURATION: 300,
+
+        TOAST_TIMEOUT: 3000    UPDATE_STATUS: (id) => `/api/resourcerequests/${id}/status`        }
+
+    }
+
+};};
+
+
+
+// Инициализация Toast уведомлений        const response = await fetch(`/api/${endpoint}`, options);
+
+toastr.options = {
+
+    closeButton: true,// Настройка toastr        if (!response.ok) {
 
     progressBar: true,
 
-    positionClass: "toast-top-right",        return response.json();
+    positionClass: "toast-top-right",toastr.options = {            throw new Error(`API error: ${response.statusText}`);
 
-    timeOut: 3000    }
+    timeOut: CONFIG.UI.TOAST_TIMEOUT,
+
+    showDuration: "300",    closeButton: true,        }
+
+    hideDuration: "1000",
+
+    extendedTimeOut: "1000",    progressBar: true,
+
+    showEasing: "swing",
+
+    hideEasing: "linear",    positionClass: "toast-top-right",        return response.json();
+
+    showMethod: "fadeIn",
+
+    hideMethod: "fadeOut"    timeOut: 3000    }
 
 };
 
-    async getMyRequests() {
+};
 
-// Утилиты для работы с API        return this.request('resourcerequests');
+// API клиент
 
-async function fetchApi(endpoint, options = {}) {    }
+class ApiClient {    async getMyRequests() {
 
-    const defaultOptions = {
+    static async fetch(endpoint, options = {}) {
+
+        const defaultOptions = {// Утилиты для работы с API        return this.request('resourcerequests');
+
+            credentials: 'include',
+
+            headers: {async function fetchApi(endpoint, options = {}) {    }
+
+                'Content-Type': 'application/json',
+
+            }    const defaultOptions = {
+
+        };
 
         credentials: 'include',    async getPendingRequests() {
 
-        headers: {        return this.request('resourcerequests/pending');
+        try {
 
-            'Content-Type': 'application/json',    }
+            const response = await fetch(`${CONFIG.API.BASE_URL}${endpoint}`, {        headers: {        return this.request('resourcerequests/pending');
+
+                ...defaultOptions,
+
+                ...options            'Content-Type': 'application/json',    }
+
+            });
 
         }
 
-    };    async createRequest(requestData) {
+            if (!response.ok) {
 
-        return this.request('resourcerequests', {
+                const error = await response.json().catch(() => ({    };    async createRequest(requestData) {
 
-    try {            method: 'POST',
+                    message: 'Произошла неизвестная ошибка'
 
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...defaultOptions, ...options });            headers: {
+                }));        return this.request('resourcerequests', {
 
-        if (!response.ok) {                'Content-Type': 'application/json'
+                throw new Error(error.message || `HTTP error! status: ${response.status}`);
 
-            throw new Error(`HTTP error! status: ${response.status}`);            },
+            }    try {            method: 'POST',
+
+
+
+            return await response.json();        const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...defaultOptions, ...options });            headers: {
+
+        } catch (error) {
+
+            console.error('API Error:', error);        if (!response.ok) {                'Content-Type': 'application/json'
+
+            throw error;
+
+        }            throw new Error(`HTTP error! status: ${response.status}`);            },
+
+    }
 
         }            body: JSON.stringify(requestData)
 
-        return await response.json();        });
+    static async getUserInfo() {
+
+        return await this.fetch(CONFIG.API.ENDPOINTS.AUTH.USER_INFO);        return await response.json();        });
+
+    }
 
     } catch (error) {    }
 
-        console.error('API Error:', error);
+    static async getRequests() {
+
+        return await this.fetch(CONFIG.API.ENDPOINTS.REQUESTS.LIST);        console.error('API Error:', error);
+
+    }
 
         toastr.error(error.message);    async approveRequest(id) {
 
-        throw error;        return this.request(`resourcerequests/${id}/approve`, {
+    static async createRequest(data) {
 
-    }            method: 'PUT'
+        return await this.fetch(CONFIG.API.ENDPOINTS.REQUESTS.CREATE, {        throw error;        return this.request(`resourcerequests/${id}/approve`, {
 
-}        });
+            method: 'POST',
+
+            body: JSON.stringify(data)    }            method: 'PUT'
+
+        });
+
+    }}        });
+
+
+
+    static async updateRequestStatus(requestId, status) {    }
+
+        return await this.fetch(CONFIG.API.ENDPOINTS.REQUESTS.UPDATE_STATUS(requestId), {
+
+            method: 'PUT',// Функции для работы с пользователем
+
+            body: JSON.stringify({ status })
+
+        });async function loadUserInfo() {    async denyRequest(id) {
 
     }
 
-// Функции для работы с пользователем
+}    try {        return this.request(`resourcerequests/${id}/deny`, {
 
-async function loadUserInfo() {    async denyRequest(id) {
 
-    try {        return this.request(`resourcerequests/${id}/deny`, {
 
-        const userInfo = await fetchApi(AUTH_ENDPOINTS.USER_INFO);            method: 'PUT'
+// UI компоненты        const userInfo = await fetchApi(AUTH_ENDPOINTS.USER_INFO);            method: 'PUT'
 
-        displayUserInfo(userInfo);        });
+class UI {
 
-    } catch (error) {    }
+    static getStatusBadge(status) {        displayUserInfo(userInfo);        });
 
-        console.error('Error loading user info:', error);}
+        const statusConfig = {
+
+            'Pending': { class: 'status-pending', icon: 'bi-hourglass-split', text: 'Ожидает' },    } catch (error) {    }
+
+            'Approved': { class: 'status-approved', icon: 'bi-check-circle', text: 'Одобрено' },
+
+            'Rejected': { class: 'status-rejected', icon: 'bi-x-circle', text: 'Отклонено' }        console.error('Error loading user info:', error);}
+
+        };
 
     }
 
-}const api = new ApiClient();
+        const config = statusConfig[status] || { class: '', icon: 'bi-question-circle', text: status };
 
+        }const api = new ApiClient();
 
+        return `
 
-function displayUserInfo(userInfo) {// UI helper functions
+            <span class="status-badge ${config.class}">
 
-    const userInfoElement = document.getElementById('userInfo');function showLoading() {
+                <i class="bi ${config.icon}"></i>
+
+                ${config.text}function displayUserInfo(userInfo) {// UI helper functions
+
+            </span>
+
+        `;    const userInfoElement = document.getElementById('userInfo');function showLoading() {
+
+    }
 
     if (userInfoElement && userInfo) {    document.querySelector('.spinner').style.display = 'block';
 
-        userInfoElement.innerHTML = `}
+    static getActionButtons(request) {
 
-            <i class="bi bi-person-circle"></i>
+        if (request.status !== 'Pending') return '';        userInfoElement.innerHTML = `}
 
-            ${userInfo.displayName || userInfo.username}function hideLoading() {
 
-        `;    document.querySelector('.spinner').style.display = 'none';
 
-    }}
+        return `            <i class="bi bi-person-circle"></i>
 
-}
+            <div class="btn-group" role="group">
 
-function showError(message) {
+                <button class="btn btn-sm btn-success btn-icon approve-btn"             ${userInfo.displayName || userInfo.username}function hideLoading() {
 
-// Функции для работы с заявками    const errorElement = document.querySelector('.error-message');
+                        data-id="${request.id}" 
 
-async function loadDashboardStats() {    errorElement.textContent = message;
+                        data-bs-toggle="tooltip"         `;    document.querySelector('.spinner').style.display = 'none';
 
-    try {    errorElement.style.display = 'block';
+                        title="Одобрить">
 
-        const requests = await fetchApi(REQUESTS_ENDPOINTS.LIST);}
+                    <i class="bi bi-check-lg"></i>    }}
 
-        const stats = calculateStats(requests);
+                </button>
 
-        displayDashboardStats(stats);function hideError() {
+                <button class="btn btn-sm btn-danger btn-icon reject-btn" }
 
-    } catch (error) {    document.querySelector('.error-message').style.display = 'none';
+                        data-id="${request.id}" 
 
-        console.error('Error loading dashboard stats:', error);}
+                        data-bs-toggle="tooltip" function showError(message) {
+
+                        title="Отклонить">
+
+                    <i class="bi bi-x-lg"></i>// Функции для работы с заявками    const errorElement = document.querySelector('.error-message');
+
+                </button>
+
+            </div>async function loadDashboardStats() {    errorElement.textContent = message;
+
+        `;
+
+    }    try {    errorElement.style.display = 'block';
+
+
+
+    static displayUserInfo(userInfo) {        const requests = await fetchApi(REQUESTS_ENDPOINTS.LIST);}
+
+        const userInfoElement = document.getElementById('userInfo');
+
+        if (!userInfoElement || !userInfo) return;        const stats = calculateStats(requests);
+
+
+
+        userInfoElement.innerHTML = `        displayDashboardStats(stats);function hideError() {
+
+            <div class="d-flex align-items-center">
+
+                <i class="bi bi-person-circle fs-4 me-2"></i>    } catch (error) {    document.querySelector('.error-message').style.display = 'none';
+
+                <div>
+
+                    <div class="fw-bold">${userInfo.displayName || userInfo.username}</div>        console.error('Error loading dashboard stats:', error);}
+
+                    <small class="text-light">${userInfo.department || ''}</small>
+
+                </div>    }
+
+            </div>
+
+        `;}// Request list rendering
 
     }
-
-}// Request list rendering
 
 function renderRequestList(requests, showActions = false) {
 
-function calculateStats(requests) {    return requests.map(request => `
+    static displayDashboardStats(stats) {
+
+        const statsContainer = document.getElementById('dashboardStats');function calculateStats(requests) {    return requests.map(request => `
+
+        if (!statsContainer) return;
 
     return requests.reduce((acc, request) => {        <div class="card request-card">
 
-        acc[request.status] = (acc[request.status] || 0) + 1;            <div class="card-header d-flex justify-content-between align-items-center">
+        const cards = [
 
-        return acc;                <h5 class="mb-0">${request.resourceName}</h5>
+            {        acc[request.status] = (acc[request.status] || 0) + 1;            <div class="card-header d-flex justify-content-between align-items-center">
 
-    }, {});                <span class="badge badge-${request.status.toLowerCase()}">${request.status}</span>
+                status: 'Pending',
 
-}            </div>
+                icon: 'bi-hourglass-split',        return acc;                <h5 class="mb-0">${request.resourceName}</h5>
 
-            <div class="card-body">
+                title: 'Ожидающие',
 
-function displayDashboardStats(stats) {                <p class="card-text">${request.requestReason}</p>
+                class: 'stat-pending'    }, {});                <span class="badge badge-${request.status.toLowerCase()}">${request.status}</span>
 
-    const statsContainer = document.getElementById('dashboardStats');                <div class="text-muted small">
+            },
 
-    if (statsContainer) {                    Requested by: ${request.requestorUsername}<br>
+            {}            </div>
 
-        statsContainer.innerHTML = `                    Date: ${new Date(request.requestDate).toLocaleDateString()}
+                status: 'Approved',
 
-            <div class="col-md-4">                </div>
+                icon: 'bi-check-circle',            <div class="card-body">
 
-                <div class="dashboard-stat stat-pending">                ${showActions && request.status === 'Pending' ? `
+                title: 'Одобренные',
 
-                    <h3>${stats.Pending || 0}</h3>                    <div class="mt-3">
+                class: 'stat-approved'function displayDashboardStats(stats) {                <p class="card-text">${request.requestReason}</p>
 
-                    <p>Ожидающие</p>                        <button class="btn btn-success btn-sm" onclick="approveRequest(${request.id})">
+            },
 
-                </div>                            Approve
+            {    const statsContainer = document.getElementById('dashboardStats');                <div class="text-muted small">
 
-            </div>                        </button>
+                status: 'Rejected',
 
-            <div class="col-md-4">                        <button class="btn btn-danger btn-sm" onclick="denyRequest(${request.id})">
+                icon: 'bi-x-circle',    if (statsContainer) {                    Requested by: ${request.requestorUsername}<br>
 
-                <div class="dashboard-stat stat-approved">                            Deny
+                title: 'Отклоненные',
 
-                    <h3>${stats.Approved || 0}</h3>                        </button>
+                class: 'stat-rejected'        statsContainer.innerHTML = `                    Date: ${new Date(request.requestDate).toLocaleDateString()}
 
-                    <p>Одобренные</p>                    </div>
+            }
 
-                </div>                ` : ''}
+        ];            <div class="col-md-4">                </div>
 
-            </div>            </div>
 
-            <div class="col-md-4">        </div>
 
-                <div class="dashboard-stat stat-rejected">    `).join('');
+        statsContainer.innerHTML = cards.map(card => `                <div class="dashboard-stat stat-pending">                ${showActions && request.status === 'Pending' ? `
 
-                    <h3>${stats.Rejected || 0}</h3>}
+            <div class="col-md-4">
 
-                    <p>Отклоненные</p>
+                <div class="dashboard-stat ${card.class}">                    <h3>${stats.Pending || 0}</h3>                    <div class="mt-3">
 
-                </div>// Event handlers
+                    <i class="bi ${card.icon} stat-icon"></i>
 
-            </div>async function loadMyRequests() {
+                    <h3>${stats[card.status] || 0}</h3>                    <p>Ожидающие</p>                        <button class="btn btn-success btn-sm" onclick="approveRequest(${request.id})">
 
-        `;    try {
+                    <p>${card.title}</p>
 
-    }        showLoading();
+                </div>                </div>                            Approve
 
-}        hideError();
+            </div>
 
-        const requests = await api.getMyRequests();
-
-async function loadRequests() {        document.getElementById('mainContent').innerHTML = `
-
-    try {            <div class="form-container">
-
-        const requests = await fetchApi(REQUESTS_ENDPOINTS.LIST);                <h2>My Access Requests</h2>
-
-        displayRequests(requests);                <button class="btn btn-primary mb-4" onclick="showNewRequestForm()">
-
-    } catch (error) {                    New Request
-
-        console.error('Error loading requests:', error);                </button>
-
-    }                <div id="requestsList">
-
-}                    ${renderRequestList(requests)}
-
-                </div>
-
-function displayRequests(requests) {            </div>
-
-    const tableBody = document.getElementById('requestsTable');        `;
-
-    if (!tableBody) return;    } catch (error) {
-
-        showError(error.message);
-
-    tableBody.innerHTML = requests.map(request => `    } finally {
-
-        <tr>        hideLoading();
-
-            <td>${request.id}</td>    }
-
-            <td>${request.resourceName}</td>}
-
-            <td>${request.requestorUsername}</td>
-
-            <td>${new Date(request.createdAt).toLocaleDateString()}</td>async function loadPendingApprovals() {
-
-            <td>${getStatusBadge(request.status)}</td>    try {
-
-            <td>${getActionButtons(request)}</td>        showLoading();
-
-        </tr>        hideError();
-
-    `).join('');        const requests = await api.getPendingRequests();
-
-        document.getElementById('mainContent').innerHTML = `
-
-    attachActionHandlers();            <div class="form-container">
-
-}                <h2>Pending Approvals</h2>
-
-                <div id="approvalsList">
-
-function getStatusBadge(status) {                    ${renderRequestList(requests, true)}
-
-    const statusClasses = {                </div>
-
-        'Pending': 'status-pending',            </div>
-
-        'Approved': 'status-approved',        `;
-
-        'Rejected': 'status-rejected'    } catch (error) {
-
-    };        showError(error.message);
-
-    return `<span class="status-badge ${statusClasses[status] || ''}">${status}</span>`;    } finally {
-
-}        hideLoading();
+        `).join('');            </div>                        </button>
 
     }
 
-function getActionButtons(request) {}
+            <div class="col-md-4">                        <button class="btn btn-danger btn-sm" onclick="denyRequest(${request.id})">
 
-    if (request.status === 'Pending') {
+    static displayRequests(requests) {
 
-        return `function showNewRequestForm() {
+        const tableBody = document.getElementById('requestsTable');                <div class="dashboard-stat stat-approved">                            Deny
 
-            <button class="btn btn-sm btn-success btn-icon approve-btn" data-id="${request.id}">    document.getElementById('mainContent').innerHTML = `
+        if (!tableBody) return;
 
-                <i class="bi bi-check-lg"></i>        <div class="form-container">
+                    <h3>${stats.Approved || 0}</h3>                        </button>
 
-            </button>            <h2>New Access Request</h2>
+        if (!requests.length) {
+
+            tableBody.innerHTML = `                    <p>Одобренные</p>                    </div>
+
+                <tr>
+
+                    <td colspan="6" class="text-center py-4">                </div>                ` : ''}
+
+                        <i class="bi bi-inbox display-4 d-block mb-2 text-muted"></i>
+
+                        <p class="text-muted">Нет активных заявок</p>            </div>            </div>
+
+                    </td>
+
+                </tr>            <div class="col-md-4">        </div>
+
+            `;
+
+            return;                <div class="dashboard-stat stat-rejected">    `).join('');
+
+        }
+
+                    <h3>${stats.Rejected || 0}</h3>}
+
+        tableBody.innerHTML = requests.map(request => `
+
+            <tr class="align-middle">                    <p>Отклоненные</p>
+
+                <td>#${request.id}</td>
+
+                <td>                </div>// Event handlers
+
+                    <div class="fw-bold">${request.resourceName}</div>
+
+                    <small class="text-muted">${request.description || ''}</small>            </div>async function loadMyRequests() {
+
+                </td>
+
+                <td>        `;    try {
+
+                    <div class="d-flex align-items-center">
+
+                        <i class="bi bi-person-circle me-2"></i>    }        showLoading();
+
+                        ${request.requestorUsername}
+
+                    </div>}        hideError();
+
+                </td>
+
+                <td>        const requests = await api.getMyRequests();
+
+                    <div>${new Date(request.createdAt).toLocaleDateString()}</div>
+
+                    <small class="text-muted">async function loadRequests() {        document.getElementById('mainContent').innerHTML = `
+
+                        ${new Date(request.createdAt).toLocaleTimeString()}
+
+                    </small>    try {            <div class="form-container">
+
+                </td>
+
+                <td>${this.getStatusBadge(request.status)}</td>        const requests = await fetchApi(REQUESTS_ENDPOINTS.LIST);                <h2>My Access Requests</h2>
+
+                <td>${this.getActionButtons(request)}</td>
+
+            </tr>        displayRequests(requests);                <button class="btn btn-primary mb-4" onclick="showNewRequestForm()">
+
+        `).join('');
+
+    } catch (error) {                    New Request
+
+        // Инициализация тултипов
+
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');        console.error('Error loading requests:', error);                </button>
+
+        tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+
+    }    }                <div id="requestsList">
+
+
+
+    static showLoader() {}                    ${renderRequestList(requests)}
+
+        // Можно добавить анимацию загрузки
+
+        document.body.style.cursor = 'wait';                </div>
+
+    }
+
+function displayRequests(requests) {            </div>
+
+    static hideLoader() {
+
+        document.body.style.cursor = 'default';    const tableBody = document.getElementById('requestsTable');        `;
+
+    }
+
+}    if (!tableBody) return;    } catch (error) {
+
+
+
+// Основной класс приложения        showError(error.message);
+
+class App {
+
+    static async init() {    tableBody.innerHTML = requests.map(request => `    } finally {
+
+        this.attachEventListeners();
+
+        await this.loadInitialData();        <tr>        hideLoading();
+
+    }
+
+            <td>${request.id}</td>    }
+
+    static attachEventListeners() {
+
+        // Обработчик формы создания заявки            <td>${request.resourceName}</td>}
+
+        const submitButton = document.getElementById('submitRequest');
+
+        if (submitButton) {            <td>${request.requestorUsername}</td>
+
+            submitButton.onclick = this.handleRequestSubmit.bind(this);
+
+        }            <td>${new Date(request.createdAt).toLocaleDateString()}</td>async function loadPendingApprovals() {
+
+
+
+        // Обработчики кнопок действий            <td>${getStatusBadge(request.status)}</td>    try {
+
+        document.addEventListener('click', async (e) => {
+
+            if (e.target.closest('.approve-btn')) {            <td>${getActionButtons(request)}</td>        showLoading();
+
+                const requestId = e.target.closest('.approve-btn').dataset.id;
+
+                await this.handleStatusUpdate(requestId, 'Approved');        </tr>        hideError();
+
+            }
+
+            else if (e.target.closest('.reject-btn')) {    `).join('');        const requests = await api.getPendingRequests();
+
+                const requestId = e.target.closest('.reject-btn').dataset.id;
+
+                await this.handleStatusUpdate(requestId, 'Rejected');        document.getElementById('mainContent').innerHTML = `
+
+            }
+
+        });    attachActionHandlers();            <div class="form-container">
+
+
+
+        // Сброс формы при закрытии модального окна}                <h2>Pending Approvals</h2>
+
+        const newRequestModal = document.getElementById('newRequestModal');
+
+        if (newRequestModal) {                <div id="approvalsList">
+
+            newRequestModal.addEventListener('hidden.bs.modal', () => {
+
+                document.getElementById('requestForm').reset();function getStatusBadge(status) {                    ${renderRequestList(requests, true)}
+
+            });
+
+        }    const statusClasses = {                </div>
+
+    }
+
+        'Pending': 'status-pending',            </div>
+
+    static async loadInitialData() {
+
+        UI.showLoader();        'Approved': 'status-approved',        `;
+
+        try {
+
+            const [userInfo, requests] = await Promise.all([        'Rejected': 'status-rejected'    } catch (error) {
+
+                ApiClient.getUserInfo(),
+
+                ApiClient.getRequests()    };        showError(error.message);
+
+            ]);
+
+    return `<span class="status-badge ${statusClasses[status] || ''}">${status}</span>`;    } finally {
+
+            UI.displayUserInfo(userInfo);
+
+            UI.displayRequests(requests);}        hideLoading();
+
+            UI.displayDashboardStats(this.calculateStats(requests));
+
+        } catch (error) {    }
+
+            toastr.error('Ошибка при загрузке данных');
+
+            console.error('Error loading initial data:', error);function getActionButtons(request) {}
+
+        } finally {
+
+            UI.hideLoader();    if (request.status === 'Pending') {
+
+        }
+
+    }        return `function showNewRequestForm() {
+
+
+
+    static calculateStats(requests) {            <button class="btn btn-sm btn-success btn-icon approve-btn" data-id="${request.id}">    document.getElementById('mainContent').innerHTML = `
+
+        return requests.reduce((acc, request) => {
+
+            acc[request.status] = (acc[request.status] || 0) + 1;                <i class="bi bi-check-lg"></i>        <div class="form-container">
+
+            return acc;
+
+        }, {});            </button>            <h2>New Access Request</h2>
+
+    }
 
             <button class="btn btn-sm btn-danger btn-icon reject-btn" data-id="${request.id}">            <form id="requestForm" onsubmit="submitRequest(event)">
 
-                <i class="bi bi-x-lg"></i>                <div class="mb-3">
+    static async handleRequestSubmit(event) {
 
-            </button>                    <label for="resourceName" class="form-label">Resource Name</label>
+        event.preventDefault();                <i class="bi bi-x-lg"></i>                <div class="mb-3">
 
-        `;                    <input type="text" class="form-control" id="resourceName" required>
+        
+
+        const requestData = {            </button>                    <label for="resourceName" class="form-label">Resource Name</label>
+
+            resourceName: document.getElementById('resource').value,
+
+            description: document.getElementById('description').value        `;                    <input type="text" class="form-control" id="resourceName" required>
+
+        };
 
     }                </div>
 
-    return '';                <div class="mb-3">
+        if (!requestData.resourceName) {
 
-}                    <label for="requestReason" class="form-label">Reason for Request</label>
+            toastr.warning('Укажите название ресурса');    return '';                <div class="mb-3">
 
-                    <textarea class="form-control" id="requestReason" rows="3" required></textarea>
+            return;
 
-async function updateRequestStatus(requestId, status) {                </div>
+        }}                    <label for="requestReason" class="form-label">Reason for Request</label>
 
-    try {                <button type="submit" class="btn btn-primary">Submit Request</button>
 
-        await fetchApi(REQUESTS_ENDPOINTS.UPDATE_STATUS(requestId), {                <button type="button" class="btn btn-secondary" onclick="loadMyRequests()">Cancel</button>
 
-            method: 'PUT',            </form>
+        UI.showLoader();                    <textarea class="form-control" id="requestReason" rows="3" required></textarea>
 
-            body: JSON.stringify({ status })        </div>
+        try {
 
-        });    `;
+            await ApiClient.createRequest(requestData);async function updateRequestStatus(requestId, status) {                </div>
 
-        toastr.success('Статус заявки обновлен');}
+            toastr.success('Заявка успешно создана');
 
-        await Promise.all([loadRequests(), loadDashboardStats()]);
+                try {                <button type="submit" class="btn btn-primary">Submit Request</button>
 
-    } catch (error) {async function submitRequest(event) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newRequestModal'));
 
-        console.error('Error updating request status:', error);    event.preventDefault();
+            modal.hide();        await fetchApi(REQUESTS_ENDPOINTS.UPDATE_STATUS(requestId), {                <button type="button" class="btn btn-secondary" onclick="loadMyRequests()">Cancel</button>
 
-    }    try {
+            
 
-}        showLoading();
+            document.getElementById('requestForm').reset();            method: 'PUT',            </form>
 
-        hideError();
+            await this.loadInitialData();
 
-function attachActionHandlers() {        
+        } catch (error) {            body: JSON.stringify({ status })        </div>
 
-    document.querySelectorAll('.approve-btn').forEach(btn => {        const requestData = {
+            toastr.error('Ошибка при создании заявки');
+
+            console.error('Error creating request:', error);        });    `;
+
+        } finally {
+
+            UI.hideLoader();        toastr.success('Статус заявки обновлен');}
+
+        }
+
+    }        await Promise.all([loadRequests(), loadDashboardStats()]);
+
+
+
+    static async handleStatusUpdate(requestId, status) {    } catch (error) {async function submitRequest(event) {
+
+        UI.showLoader();
+
+        try {        console.error('Error updating request status:', error);    event.preventDefault();
+
+            await ApiClient.updateRequestStatus(requestId, status);
+
+            toastr.success('Статус заявки обновлен');    }    try {
+
+            await this.loadInitialData();
+
+        } catch (error) {}        showLoading();
+
+            toastr.error('Ошибка при обновлении статуса');
+
+            console.error('Error updating status:', error);        hideError();
+
+        } finally {
+
+            UI.hideLoader();function attachActionHandlers() {        
+
+        }
+
+    }    document.querySelectorAll('.approve-btn').forEach(btn => {        const requestData = {
+
+}
 
         btn.onclick = () => updateRequestStatus(btn.dataset.id, 'Approved');            resourceName: document.getElementById('resourceName').value,
 
-    });            requestReason: document.getElementById('requestReason').value
+// Инициализация приложения
+
+document.addEventListener('DOMContentLoaded', () => App.init());    });            requestReason: document.getElementById('requestReason').value
 
         };
 
