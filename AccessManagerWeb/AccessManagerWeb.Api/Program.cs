@@ -96,6 +96,14 @@ builder.Services.AddSingleton<IEmailService>(sp =>
         int.Parse(builder.Configuration["Email:SmtpPort"]),
         builder.Configuration["Email:FromAddress"]));
 
+// Настройка глобальной авторизации
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 // Добавляем детальное логирование
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -117,14 +125,6 @@ app.Use(async (context, next) =>
         logger.LogError(ex, "Необработанная ошибка: {Message}", ex.Message);
         throw;
     }
-});
-
-// Настройка глобальной авторизации
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
 });
 
 if (app.Environment.IsDevelopment())
