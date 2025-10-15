@@ -13,6 +13,24 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка URLS через конфигурацию
 builder.WebHost.UseUrls("http://localhost:5080", "https://localhost:5081");
 
+// Добавляем поддержку контроллеров и JSON
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+});
+
+// Настройка Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Access Manager API",
+        Version = "v1"
+    });
+});
+
 // Настройка CORS
 builder.Services.AddCors(options =>
 {
@@ -157,20 +175,21 @@ if (app.Environment.IsDevelopment())
 // Настройка CORS должна быть в начале конвейера
 app.UseCors("AllowAll");
 
+// Настройка статических файлов и маршрутизации
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseRouting();
 
-// Настройка HTTPS после CORS и Routing
+// Настройка безопасности
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
 app.UseHttpsRedirection();
-
-// Аутентификация и авторизация после HTTPS
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Добавляем обработку ошибок аутентификации
+// Обработка ошибок аутентификации
 app.Use(async (context, next) =>
 {
     await next();
@@ -189,18 +208,21 @@ app.Use(async (context, next) =>
     }
 });
 
-// Swagger после базовой настройки безопасности
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Swagger в режиме разработки
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Access Manager API V1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
-// Endpoints должны быть в конце
-app.MapControllers();
-app.UseAuthorization();
+// SPA fallback route
+app.MapFallbackToFile("index.html");
 
+// API endpoints
 app.MapControllers();
 
 app.Run();
